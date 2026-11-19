@@ -9,13 +9,16 @@ LDLIBS = -pthread -lrt
 # Headers
 HDR = lib/*.h
 
+# Source files
 SRC = main.c lib/*.c
 
+# The name under which the executable is created
 OUTNAME = airport
 
 # Default command (cmd: "make")
 all: $(OUTNAME)
 
+# The building rule
 $(OUTNAME): $(SRC) $(HDR) 
 	$(CC) $(CFLAGS) $(SRC) $(LDLIBS) -o $(OUTNAME)
 
