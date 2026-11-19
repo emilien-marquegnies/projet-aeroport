@@ -2,22 +2,29 @@
 # Compiler
 CC = gcc
 # Compilation flags. Add -g to debug
-CFLAGS = -Wall -Wextra -std=c11 -D_POSIX_C_SOURCE=200809L
+CFLAGS = -Wall -Wextra -std=c11 -D_POSIX_C_SOURCE=200809L -Ilib
 # Librairies used.
 LDLIBS = -pthread -lrt
 
-# Default command (cmd: "make")
-all: template
+# Headers
+HDR = lib/*.h
 
-# Compiles the given template (cmd: "make template")
-# $@ is the name of the command, so "template"
-# The files after "template:" are the files that must be present before running the command
-template: main-template.c airport.c airport.h
-	$(CC) $(CFLAGS) -o $@ main-template.c airport.c $(LDLIBS)
+# Source files
+SRC = main.c lib/*.c
+
+# The name under which the executable is created
+OUTNAME = airport
+
+# Default command (cmd: "make")
+all: $(OUTNAME)
+
+# The building rule
+$(OUTNAME): $(SRC) $(HDR) 
+	$(CC) $(CFLAGS) $(SRC) $(LDLIBS) -o $(OUTNAME)
 
 # Delete the built file (cmd: "make clean")
 clean:
-	rm -f template
+	rm -f $(OUTNAME)
 
 # These commands do not correspond to files
 # When running "make template", it won't do anything if "template" exists
