@@ -1,6 +1,7 @@
-#include "lib/airport.h"
-#include "lib/simple_signal.h"
+#include "airport.h"
+#include "simple_signal.h"
 #include <signal.h>
+#include <time.h>
 #include <stdio.h>
 
 
@@ -27,23 +28,11 @@ int main(void) {
     // Opens the airport. This is the start of periods of all tasks.
     open_airport(airport);
 
-    // We run one step for each task
-    // Each call uses the runway for STEP_TIME - JITTER ms.
-    inspect_runway(airport);
-    if (land_step(airport) == NO_PLANE) {
-        printf("No plane waiting: nothing to land\n");
-    }
-    plow_step(airport);
+    // Computes the reference time t0
+    struct timespec t0;
+    clock_gettime(CLOCK_REALTIME, &t0);
 
-    // We wait for the end of the day (or a crash, or too many incidents).
-    outcome_t outcome;
-    wait_airport_closed(airport, &outcome);
-
-    if (outcome == DAY_COMPLETED) {
-        printf("The day is over\n");
-    } else {
-        printf("The airport closed early\n");
-    }
+    //TODO : next step : create a thread per activity
 
     // Free resources
     free_airport(airport);
