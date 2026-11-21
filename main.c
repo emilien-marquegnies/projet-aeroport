@@ -51,16 +51,16 @@ static void on_plane(int sig) {
 static void* inspection_task(void* args){
     TaskArgs* taskArgs = args;
 
-    __uint32_t instances_in_cycles = HYPERPERIOD / INSPECTION_PERIOD;
+    uint32_t instances_in_cycles = HYPERPERIOD / INSPECTION_PERIOD;
 
     // Loop infinitly on cycles
-    for (__uint32_t cycle = 0; open_airport_flag; cycle++) {
+    for (uint32_t cycle = 0; open_airport_flag; cycle++) {
         //Loop on the instances (aka the numbers of time the task is executed in one hyperperiod)
-        for (__uint32_t instance = 0; instance < instances_in_cycles; instance++) {
+        for (uint32_t instance = 0; instance < instances_in_cycles; instance++) {
             //Loop on the step inside an execution of the task
-            for (__uint32_t step = 0; step < INSPECTION_STEPS; step++) {
-                __uint32_t activationStep = cycle * HYPERPERIOD + instance * INSPECTION_PERIOD;
-                __uint32_t delayInSteps = activationStep + inspection_activation_offsets[instance][step];
+            for (uint32_t step = 0; step < INSPECTION_STEPS; step++) {
+                uint32_t activationStep = cycle * HYPERPERIOD + instance * INSPECTION_PERIOD;
+                uint32_t delayInSteps = activationStep + inspection_activation_offsets[instance][step];
                 delay_until(taskArgs->t0, delayInSteps * STEP_TIME);
 
                 error_t err = inspect_runway(airport);
@@ -77,16 +77,16 @@ static void* inspection_task(void* args){
 static void* plowing_task(void* args){
     TaskArgs* taskArgs = args;
 
-    __uint32_t instances_in_cycles = HYPERPERIOD / PLOW_PERIOD;
+    uint32_t instances_in_cycles = HYPERPERIOD / PLOW_PERIOD;
 
     // Loop infinitly on cycles
-    for (__uint32_t cycle = 0; open_airport_flag; cycle++) {
+    for (uint32_t cycle = 0; open_airport_flag; cycle++) {
         //Loop on the instances (aka the numbers of time the task is executed in one hyperperiod)
-        for (__uint32_t instance = 0; instance < instances_in_cycles; instance++) {
+        for (uint32_t instance = 0; instance < instances_in_cycles; instance++) {
             //Loop on the step inside an execution of the task
-            for (__uint32_t step = 0; step < PLOW_STEPS; step++) {
-                __uint32_t activationStep = cycle * HYPERPERIOD + instance * PLOW_PERIOD;
-                __uint32_t delayInSteps = activationStep + plowing_activation_offsets[instance][step];
+            for (uint32_t step = 0; step < PLOW_STEPS; step++) {
+                uint32_t activationStep = cycle * HYPERPERIOD + instance * PLOW_PERIOD;
+                uint32_t delayInSteps = activationStep + plowing_activation_offsets[instance][step];
                 delay_until(taskArgs->t0, delayInSteps * STEP_TIME);
 
                 error_t err = plow_step(airport);
@@ -104,20 +104,20 @@ static void* plowing_task(void* args){
 static void* landing_task(void* args){
     TaskArgs* taskArgs = args;
 
-    __uint32_t instances_in_cycles = HYPERPERIOD / LANDING_PERIOD;
+    uint32_t instances_in_cycles = HYPERPERIOD / LANDING_PERIOD;
 
     timer_t watchdog = watchdog_function(landing_expire);
 
-    volatile sig_atomic_t consecutive_landing_steps = 0;
+    uint32_t consecutive_landing_steps = 0;
 
     // Loop infinitly on cycles
-    for (__uint32_t cycle = 0; ; cycle++) {
+    for (uint32_t cycle = 0; ; cycle++) {
         //Loop on the instances (aka the numbers of time the task is executed in one hyperperiod)
-        for (__uint32_t instance = 0; instance < instances_in_cycles; instance++) {
+        for (uint32_t instance = 0; instance < instances_in_cycles; instance++) {
             //Loop on the step inside an execution of the task
-            for (__uint32_t step = 0; step < LANDING_STEPS; step++) {
-                __uint32_t activationStep = cycle * HYPERPERIOD + instance * LANDING_PERIOD;
-                __uint32_t delayInSteps = activationStep + landing_activation_offsets[instance][step];
+            for (uint32_t step = 0; step < LANDING_STEPS; step++) {
+                uint32_t activationStep = cycle * HYPERPERIOD + instance * LANDING_PERIOD;
+                uint32_t delayInSteps = activationStep + landing_activation_offsets[instance][step];
                 delay_until(taskArgs->t0, delayInSteps * STEP_TIME);
                 if(!open_airport_flag){
                     timer_delete(watchdog);
