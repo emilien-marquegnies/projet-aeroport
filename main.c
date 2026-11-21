@@ -50,7 +50,7 @@ static void landing_expire(union sigval s){
     error_t err = abort_landing(airport);
     
     if(err == INVALID_STATE){
-        printf("THIS SHOULD NOT HAPPEN ! ABORT_LANDING CALLED WHILE NO PLANE WAS LANDING\n");
+        fprintf(stderr, "THIS SHOULD NOT HAPPEN ! ABORT_LANDING CALLED WHILE NO PLANE WAS LANDING\n");
     }
 }
 
@@ -81,6 +81,9 @@ static void* inspection_task(void* args){
                 if(err == AIRPORT_CLOSED || err == COLLISION || !open_airport_flag){
                     return NULL;
                 }
+                else if(err != OK){
+                    fprintf(stderr, "An error occured while inspecting the runway : %d\n", err);
+                }
             }
         }
     }
@@ -106,6 +109,9 @@ static void* plowing_task(void* args){
 
                 if(err == AIRPORT_CLOSED || err == COLLISION || !open_airport_flag){
                     return NULL;
+                }
+                else if(err != OK){
+                    fprintf(stderr, "An error occured while plowing : %d\n", err);
                 }
             }
         }
@@ -133,8 +139,7 @@ static void* landing_task(void* args){
                 uint32_t delayInSteps = activationStep + landing_activation_offsets[instance][step];
                 delay_until(taskArgs->t0, delayInSteps * STEP_TIME);
                 if(!open_airport_flag){
-                    timer_delete(watchdog);
-                    return NULL;
+                    goto end;
                 }
 
                 if(total_plane_arrived > total_plane_landed){
@@ -154,18 +159,22 @@ static void* landing_task(void* args){
                         }
                     }
                     else if(err == AIRPORT_CLOSED || err == COLLISION){
-                        timer_delete(watchdog);
-                        return NULL;
+                        goto end;
                     }
-                    else{
+                    else if (err == LANDING_ABORTED) {
                         consecutive_landing_steps = 0;
+                    }
+                    else {
+                        fprintf(stderr, "land_step error : %d\n", err);
                     }
                 }
             }
         }
     }
-    return NULL;
 
+    end:
+        timer_delete(watchdog);
+        return NULL;
 }
 
 int main(void) {
