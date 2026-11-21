@@ -8,6 +8,8 @@
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 
 static uint32_t gcd(uint32_t a, uint32_t b) {
@@ -51,8 +53,6 @@ static void landing_expire(union sigval s){
         printf("THIS SHOULD NOT HAPPEN ! ABORT_LANDING CALLED WHILE NO PLANE WAS LANDING\n");
     }
 }
-
-// Important: this code ignores most errors! Do not do this.
 
 // Called each time a plane arrives (signal ARRIVAL_SIGNAL, i.e. SIGUSR1).
 // The landing is done by the landing thread so keep this as short (in runtime) as possible.
@@ -169,42 +169,90 @@ static void* landing_task(void* args){
 }
 
 int main(void) {
+    int return_code = EXIT_FAILURE;
+    error_t err;
+    int created_threads = 0;
+    int thread_code = 0;
+    TaskArgs args = {0};
+    outcome_t outcome;
     hyperperiod = lcm(lcm(INSPECTION_PERIOD, LANDING_PERIOD), PLOW_PERIOD);
 
-
-    pthread_t inspection_thread;
-    pthread_t landing_thread;
-    pthread_t plowing_thread;
+    pthread_t threads[3];
 
     // Initialize the airport
-    error_t initErr = init_airport(&airport);
+    err = init_airport(&airport);
+    if(err != OK){
+        fprintf(stderr, "Could not initialize airport : %d\n", err);
+        return return_code;
+    }
 
     // Install the handler BEFORE opening the airport otherwise the airport won't start.
     handle_signal(ARRIVAL_SIGNAL, on_plane);
 
     // Opens the airport. This is the start of periods of all tasks.
-    open_airport(airport);
+    err = open_airport(airport);
+    if(err != OK){
+        fprintf(stderr, "Could not open airport : %d\n", err);
+        goto cleanup_airport;
+    }
+    
     // Computes the reference time t0
-    TaskArgs args = {0};
+    if(clock_gettime(CLOCK_REALTIME, &args.t0) != 0){
+        perror("clock_gettime");
+        goto cleanup_airport;
+    }
 
-    clock_gettime(CLOCK_REALTIME, &args.t0);
+    thread_code = pthread_create(&threads[0],NULL, &inspection_task, &args);
+    if(thread_code != 0){
+        fprintf(stderr, "Error creating inspection thread : %s\n", strerror(thread_code));
+        goto stop_threads;
+    }
+    created_threads++;
 
-    pthread_create(&inspection_thread,NULL, &inspection_task, &args);
-    pthread_create(&landing_thread,NULL, &landing_task, &args);
-    pthread_create(&plowing_thread,NULL, &plowing_task, &args);
+    thread_code = pthread_create(&threads[1],NULL, &landing_task, &args);
+    if(thread_code != 0){
+        fprintf(stderr, "Error creating landing thread : %s\n", strerror(thread_code));
+        goto stop_threads;
+    }
+    created_threads++;
 
-    outcome_t outcome;
+    thread_code = pthread_create(&threads[2],NULL, &plowing_task, &args);
+    if(thread_code != 0){
+        fprintf(stderr, "Error creating plowing thread : %s\n", strerror(thread_code));
+        goto stop_threads;
+    }
+    created_threads++;
 
-    wait_airport_closed(airport, &outcome);
-    open_airport_flag = 0;
-    printf("Outcome : %d\n", outcome);
+    err = wait_airport_closed(airport, &outcome);
+    if(err != OK){
+        fprintf(stderr, "Error while waiting for the airport to close : %d\n", err);
+        goto stop_threads;
+    }
+
+    switch (outcome) {
+        case DAY_COMPLETED:      
+            printf("Day completed\n");
+            return_code = EXIT_SUCCESS;
+            break;
+        case TOO_MANY_INCIDENTS:
+            printf("Closed: too many incidents\n"); 
+            break;
+        case CRASHED:
+            printf("Closed: crash\n");
+            break;
+        default:
+            printf("Unexpected outcome %d\n", outcome);
+            break;
+    }
+
     // Free resources
-    pthread_join(inspection_thread,NULL);
-    pthread_join(landing_thread,NULL);
-    pthread_join(plowing_thread,NULL);
+    stop_threads:
+        open_airport_flag = 0;
+        for(int i = 0; i < created_threads; i++){
+            pthread_join(threads[i],NULL);
+        }
 
-    free_airport(airport);
-
-
-    return 0;
+    cleanup_airport:
+        free_airport(airport);
+        return return_code;
 }
