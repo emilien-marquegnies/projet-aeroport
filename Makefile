@@ -3,6 +3,8 @@
 CC = gcc
 # Compilation flags. Add -g to debug
 CFLAGS = -Wall -Wextra -std=c11 -D_POSIX_C_SOURCE=200809L -Ilib
+# User defined flags for instance for overriding airport.h constant for testing purposes
+CFLAGS += $(EXTRA)
 # Librairies used.
 LDLIBS = -pthread -lrt
 
