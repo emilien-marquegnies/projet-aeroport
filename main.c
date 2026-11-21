@@ -7,10 +7,23 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdatomic.h>
+#include <stdint.h>
 
 
-//TODO : improvement dymically compute it based on the values from airport.h instead of hardcoding it
-#define HYPERPERIOD 12
+static uint32_t gcd(uint32_t a, uint32_t b) {
+    while (b != 0) {
+        uint32_t r = a % b;
+        a = b;
+        b = r;
+    }
+    return a;
+}
+
+static uint32_t lcm(uint32_t a, uint32_t b) {
+    return a / gcd(a, b) * b;
+}
+
+uint32_t hyperperiod = 0;
 
 volatile sig_atomic_t total_plane_arrived = 0;
 volatile sig_atomic_t total_plane_landed = 0;
@@ -51,7 +64,7 @@ static void on_plane(int sig) {
 static void* inspection_task(void* args){
     TaskArgs* taskArgs = args;
 
-    uint32_t instances_in_cycles = HYPERPERIOD / INSPECTION_PERIOD;
+    uint32_t instances_in_cycles = hyperperiod / INSPECTION_PERIOD;
 
     // Loop infinitly on cycles
     for (uint32_t cycle = 0; open_airport_flag; cycle++) {
@@ -59,7 +72,7 @@ static void* inspection_task(void* args){
         for (uint32_t instance = 0; instance < instances_in_cycles; instance++) {
             //Loop on the step inside an execution of the task
             for (uint32_t step = 0; step < INSPECTION_STEPS; step++) {
-                uint32_t activationStep = cycle * HYPERPERIOD + instance * INSPECTION_PERIOD;
+                uint32_t activationStep = cycle * hyperperiod + instance * INSPECTION_PERIOD;
                 uint32_t delayInSteps = activationStep + inspection_activation_offsets[instance][step];
                 delay_until(taskArgs->t0, delayInSteps * STEP_TIME);
 
@@ -77,7 +90,7 @@ static void* inspection_task(void* args){
 static void* plowing_task(void* args){
     TaskArgs* taskArgs = args;
 
-    uint32_t instances_in_cycles = HYPERPERIOD / PLOW_PERIOD;
+    uint32_t instances_in_cycles = hyperperiod / PLOW_PERIOD;
 
     // Loop infinitly on cycles
     for (uint32_t cycle = 0; open_airport_flag; cycle++) {
@@ -85,7 +98,7 @@ static void* plowing_task(void* args){
         for (uint32_t instance = 0; instance < instances_in_cycles; instance++) {
             //Loop on the step inside an execution of the task
             for (uint32_t step = 0; step < PLOW_STEPS; step++) {
-                uint32_t activationStep = cycle * HYPERPERIOD + instance * PLOW_PERIOD;
+                uint32_t activationStep = cycle * hyperperiod + instance * PLOW_PERIOD;
                 uint32_t delayInSteps = activationStep + plowing_activation_offsets[instance][step];
                 delay_until(taskArgs->t0, delayInSteps * STEP_TIME);
 
@@ -104,7 +117,7 @@ static void* plowing_task(void* args){
 static void* landing_task(void* args){
     TaskArgs* taskArgs = args;
 
-    uint32_t instances_in_cycles = HYPERPERIOD / LANDING_PERIOD;
+    uint32_t instances_in_cycles = hyperperiod / LANDING_PERIOD;
 
     timer_t watchdog = watchdog_function(landing_expire);
 
@@ -116,7 +129,7 @@ static void* landing_task(void* args){
         for (uint32_t instance = 0; instance < instances_in_cycles; instance++) {
             //Loop on the step inside an execution of the task
             for (uint32_t step = 0; step < LANDING_STEPS; step++) {
-                uint32_t activationStep = cycle * HYPERPERIOD + instance * LANDING_PERIOD;
+                uint32_t activationStep = cycle * hyperperiod + instance * LANDING_PERIOD;
                 uint32_t delayInSteps = activationStep + landing_activation_offsets[instance][step];
                 delay_until(taskArgs->t0, delayInSteps * STEP_TIME);
                 if(!open_airport_flag){
@@ -156,13 +169,15 @@ static void* landing_task(void* args){
 }
 
 int main(void) {
+    hyperperiod = lcm(lcm(INSPECTION_PERIOD, LANDING_PERIOD), PLOW_PERIOD);
+
 
     pthread_t inspection_thread;
     pthread_t landing_thread;
     pthread_t plowing_thread;
 
     // Initialize the airport
-    init_airport(&airport);
+    error_t initErr = init_airport(&airport);
 
     // Install the handler BEFORE opening the airport otherwise the airport won't start.
     handle_signal(ARRIVAL_SIGNAL, on_plane);
