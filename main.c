@@ -67,7 +67,7 @@ static void* inspection_task(void* args){
     uint32_t instances_in_cycles = hyperperiod / INSPECTION_PERIOD;
 
     // Loop infinitly on cycles
-    for (uint32_t cycle = 0; open_airport_flag; cycle++) {
+    for (uint32_t cycle = 0; ; cycle++) {
         //Loop on the instances (aka the numbers of time the task is executed in one hyperperiod)
         for (uint32_t instance = 0; instance < instances_in_cycles; instance++) {
             //Loop on the step inside an execution of the task
@@ -96,7 +96,7 @@ static void* plowing_task(void* args){
     uint32_t instances_in_cycles = hyperperiod / PLOW_PERIOD;
 
     // Loop infinitly on cycles
-    for (uint32_t cycle = 0; open_airport_flag; cycle++) {
+    for (uint32_t cycle = 0; ; cycle++) {
         //Loop on the instances (aka the numbers of time the task is executed in one hyperperiod)
         for (uint32_t instance = 0; instance < instances_in_cycles; instance++) {
             //Loop on the step inside an execution of the task
