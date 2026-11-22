@@ -21,7 +21,7 @@ timer_t watchdog_function(void (*fonction)(union sigval)){
 
 
     timer_t timer;
-    timer_create(CLOCK_MONOTONIC, &se, &timer);
+    timer_create(CLOCK_REALTIME, &se, &timer);
 
     return timer;
 }
